@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Gastos Personales</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
 
@@ -582,6 +583,96 @@ canvas { display: block; max-width: 100%; }
 }
 .export-close-btn:hover { background: var(--border); }
 
+/* ─── Editar gasto ───────────────────────────────────────── */
+.exp-item { position: relative; }
+.exp-actions { display: flex; gap: 6px; }
+.edit-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--surface2); color: var(--fg2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: background .12s;
+}
+.edit-btn:hover { background: var(--accent-lt); color: var(--accent); }
+.edit-inline {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 6px;
+  display: none;
+}
+.edit-inline.open { display: block; }
+.edit-inline-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.edit-inline input, .edit-inline select {
+  flex: 1; padding: 7px 10px;
+  border: 1.5px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--fg);
+  font-size: 13px; outline: none;
+}
+.edit-inline input:focus, .edit-inline select:focus { border-color: var(--accent); }
+.edit-inline-btns { display: flex; gap: 8px; }
+.edit-save-btn {
+  flex: 1; padding: 8px;
+  background: var(--accent); color: #fff;
+  border-radius: 7px; font-size: 13px; font-weight: 700;
+}
+.edit-cancel-btn {
+  padding: 8px 14px;
+  background: var(--surface); color: var(--fg2);
+  border-radius: 7px; font-size: 13px;
+  border: 1px solid var(--border);
+}
+
+/* ─── Nota cierre ─────────────────────────────────────────── */
+.nota-mes-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.nota-mes-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.nota-mes-header h2 { font-size: 13px; font-weight: 700; }
+.nota-mes-header .nota-mes-mk { font-size: 11px; color: var(--fg3); }
+.nota-mes-input {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--fg);
+  font-size: 13px; outline: none; resize: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.nota-mes-input:focus { border-color: var(--accent); }
+.nota-mes-footer { display: flex; justify-content: flex-end; margin-top: 6px; }
+.nota-mes-save {
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-lt); border-radius: 5px; padding: 4px 12px;
+  transition: opacity .15s;
+}
+.nota-mes-save:hover { opacity: .8; }
+.nota-mes-saved { font-size: 11px; color: var(--ok); display: none; }
+
+/* ─── Desglose semanal ────────────────────────────────────── */
+.semanas-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.semanas-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.semanas-header h2 { font-size: 13px; font-weight: 700; }
+.semana-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+}
+.semana-row:last-child { border-bottom: none; }
+.semana-label { font-size: 12px; color: var(--fg2); min-width: 80px; display: flex; flex-direction: column; }
+.semana-dates { font-size: 10px; color: var(--fg3); }
+.semana-bar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.semana-bar-fill  { height: 100%; border-radius: 3px; background: var(--accent); }
+.semana-amount { font-size: 12px; font-weight: 600; min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+.semana-amount.max { color: var(--warn); }
+
 /* ─── Duplicado warning ──────────────────────────────────── */
 .dup-warning {
   background: var(--warn-lt);
@@ -895,6 +986,28 @@ canvas { display: block; max-width: 100%; }
       <div class="expense-list" id="expense-list"></div>
     </div>
 
+    <!-- Desglose semanal -->
+    <div class="semanas-wrap" id="semanas-wrap">
+      <div class="semanas-header">
+        <h2>📅 Gasto por semana</h2>
+        <span id="semanas-sub" style="font-size:11px;color:var(--fg3)"></span>
+      </div>
+      <div id="semanas-list"></div>
+    </div>
+
+    <!-- Nota del mes -->
+    <div class="nota-mes-wrap">
+      <div class="nota-mes-header">
+        <h2>📝 Nota del mes</h2>
+        <span class="nota-mes-mk" id="nota-mes-mk"></span>
+      </div>
+      <textarea class="nota-mes-input" id="nota-mes-input" rows="2" placeholder="Ej: Mes caro por el cumple de mamá, viajé al pueblo dos veces…"></textarea>
+      <div class="nota-mes-footer">
+        <span class="nota-mes-saved" id="nota-mes-saved">✓ Guardado</span>
+        <button class="nota-mes-save" id="nota-mes-save">Guardar nota</button>
+      </div>
+    </div>
+
     <!-- Saldo real -->
     <div class="saldo-card" id="saldo-card">
       <div class="saldo-card-header">
@@ -996,6 +1109,7 @@ const CATEGORIES = [
   { id:'servicios',  label:'💡 Servicios',  color:'var(--cat5)' },
   { id:'deudas',     label:'💳 Deudas',     color:'var(--cat6)' },
   { id:'ahorro',     label:'🏠 Ahorro',     color:'var(--cat7)' },
+  { id:'pueblo',     label:'🏡 Pueblo',     color:'#7C6F5B'     },
   { id:'otros',      label:'📦 Otros',      color:'var(--fg3)'  },
 ];
 
@@ -1024,8 +1138,9 @@ function getFixedCosts(monthKey) {
 
 // ─── State ─────────────────────────────────────────────────────
 // sueldos: { "2026-10": 1283023, ... }  — per month override
-let state = { currentMonth: getCurrentMonthKey(), expenses: {}, sueldos: {}, cierreDismissed: {}, saldos: {} };
+let state = { currentMonth: getCurrentMonthKey(), expenses: {}, sueldos: {}, cierreDismissed: {}, saldos: {}, notas: {} };
 // saldos: { "2026-10": [{ts: timestamp_ms, amount: 150000, calc: 200000}, ...] }
+// notas: { "2026-10": "texto de la nota del mes" }
 
 function getCurrentMonthKey() {
   const now = new Date();
@@ -1042,6 +1157,7 @@ function load() {
       state.sueldos         = parsed.sueldos         || {};
       state.cierreDismissed = parsed.cierreDismissed || {};
       state.saldos          = parsed.saldos          || {};
+      state.notas           = parsed.notas           || {};
     }
     // migrate v1
     const v1 = localStorage.getItem('gastos_tr_v1');
@@ -1059,7 +1175,8 @@ function save() {
       expenses: state.expenses,
       sueldos: state.sueldos,
       cierreDismissed: state.cierreDismissed,
-      saldos: state.saldos
+      saldos: state.saldos,
+      notas: state.notas
     }));
   } catch(e) {}
 }
@@ -1209,7 +1326,10 @@ function render() {
       const cat = CAT_MAP[e.cat] || CAT_MAP['otros'];
       const d = new Date(e.date + 'T12:00:00');
       const dateStr = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
-      return `<div class="expense-row">
+      const catOptions = CATEGORIES.map(c =>
+        `<option value="${c.id}"${c.id===e.cat?' selected':''}>${c.label}</option>`
+      ).join('');
+      return `<div class="expense-row" data-id="${e.id}">
         <div class="cat-badge" style="background:${cat.color}22;color:${cat.color}">${cat.label.split(' ')[0]}</div>
         <div class="info">
           <div class="desc">${escHtml(e.desc)}</div>
@@ -1217,7 +1337,22 @@ function render() {
         </div>
         <div class="amount-del">
           <span class="amount">${fmt(e.amount)}</span>
+          <button class="edit-btn" data-id="${e.id}" data-month="${mk}" title="Editar">✏️</button>
           <button class="del-btn" data-id="${e.id}" data-month="${mk}" title="Eliminar">✕</button>
+        </div>
+        <div class="edit-inline" id="edit-${e.id}" style="display:none">
+          <div class="edit-inline-row">
+            <input type="text" class="edit-desc" value="${escHtml(e.desc)}" placeholder="Descripción">
+            <input type="number" class="edit-amount" value="${e.amount}" placeholder="Importe" inputmode="decimal">
+          </div>
+          <div class="edit-inline-row">
+            <input type="date" class="edit-date" value="${e.date}">
+            <select class="edit-cat">${catOptions}</select>
+          </div>
+          <div class="edit-inline-row">
+            <input type="text" class="edit-notes" value="${escHtml(e.notes||'')}" placeholder="Nota (opcional)">
+            <button class="edit-save-btn" data-id="${e.id}" data-month="${mk}">Guardar</button>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -1225,6 +1360,12 @@ function render() {
 
   // Chart
   drawDonut(fixed, expenses);
+
+  // Weekly breakdown
+  renderSemanas();
+
+  // Monthly note
+  renderNotaMes();
 
   // History
   renderHistory();
@@ -1401,6 +1542,72 @@ function renderHistory() {
   }).join('');
 }
 
+// ─── Desglose semanal ──────────────────────────────────────────
+function renderSemanas() {
+  const wrap = document.getElementById('semanas-wrap');
+  const list = document.getElementById('semanas-list');
+  if (!wrap || !list) return;
+  const mk = state.currentMonth;
+  const expenses = getExpenses(mk);
+  if (!expenses.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  // Calculate weeks of the month
+  const [y, m] = mk.split('-').map(Number);
+  const firstDay = new Date(y, m-1, 1);
+  const lastDay  = new Date(y, m, 0);
+
+  // Build week buckets: Mon-Sun
+  const weeks = [];
+  let cur = new Date(firstDay);
+  // Go back to Monday if needed
+  const dow = cur.getDay(); // 0=Sun
+  if (dow !== 1) cur.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1));
+  while (cur <= lastDay) {
+    const wStart = new Date(cur);
+    const wEnd   = new Date(cur); wEnd.setDate(wEnd.getDate() + 6);
+    weeks.push({ start: new Date(wStart), end: new Date(wEnd), total: 0 });
+    cur.setDate(cur.getDate() + 7);
+  }
+
+  // Assign expenses to weeks
+  expenses.forEach(e => {
+    const ed = new Date(e.date + 'T12:00:00');
+    const w = weeks.find(w => ed >= w.start && ed <= w.end);
+    if (w) w.total += e.amount;
+  });
+
+  const maxTotal = Math.max(...weeks.map(w => w.total), 1);
+  const fmt2 = v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v;
+
+  list.innerHTML = weeks.map((w, i) => {
+    const pct = Math.round((w.total / maxTotal) * 100);
+    const label = `Sem ${i+1}`;
+    const dateRange = `${w.start.getDate()}/${w.start.getMonth()+1}–${w.end.getDate()}/${w.end.getMonth()+1}`;
+    return `<div class="semana-row">
+      <span class="semana-label">${label}<span class="semana-dates">${dateRange}</span></span>
+      <div class="semana-bar-track"><div class="semana-bar-fill" style="width:${pct}%"></div></div>
+      <span class="semana-amount">${fmt2(w.total)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Nota del mes ──────────────────────────────────────────────
+function renderNotaMes() {
+  const input = document.getElementById('nota-mes-input');
+  if (!input) return;
+  input.value = state.notas[state.currentMonth] || '';
+}
+
+document.getElementById('nota-mes-save')?.addEventListener('click', () => {
+  const val = document.getElementById('nota-mes-input').value.trim();
+  state.notas[state.currentMonth] = val;
+  save();
+  const btn = document.getElementById('nota-mes-save');
+  btn.textContent = '✓ Guardado';
+  setTimeout(() => { btn.textContent = 'Guardar nota'; }, 1500);
+});
+
 // ─── Form ──────────────────────────────────────────────────────
 function openForm() {
   const overlay = document.getElementById('overlay');
@@ -1534,6 +1741,43 @@ document.addEventListener('click', e => {
     state.expenses[mk] = state.expenses[mk].filter(x => x.id !== id);
     save();
     render(); renderAlertas();
+  }
+});
+
+// Edit expense — toggle inline form
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.edit-btn');
+  if (!btn) return;
+  const id  = btn.dataset.id;
+  const row = document.getElementById('edit-' + id);
+  if (!row) return;
+  const visible = row.style.display !== 'none';
+  // Close any other open edit forms
+  document.querySelectorAll('.edit-inline').forEach(el => el.style.display = 'none');
+  row.style.display = visible ? 'none' : 'flex';
+  if (!visible) row.querySelector('.edit-desc').focus();
+});
+
+// Save edited expense
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.edit-save-btn');
+  if (!btn) return;
+  const id  = parseFloat(btn.dataset.id);
+  const mk  = btn.dataset.month;
+  const row = btn.closest('.expense-row');
+  const desc   = row.querySelector('.edit-desc').value.trim();
+  const amount = parseFloat(row.querySelector('.edit-amount').value);
+  const date   = row.querySelector('.edit-date').value;
+  const cat    = row.querySelector('.edit-cat').value;
+  const notes  = row.querySelector('.edit-notes').value.trim();
+  if (!desc || !amount || !date) return;
+  if (state.expenses[mk]) {
+    const idx = state.expenses[mk].findIndex(x => x.id === id);
+    if (idx >= 0) {
+      state.expenses[mk][idx] = { ...state.expenses[mk][idx], desc, amount, date, cat, notes };
+      save();
+      render(); renderAlertas();
+    }
   }
 });
 
@@ -2078,3 +2322,5 @@ render();
 renderAlertas();
 renderSaldo();
 </script>
+
+</body></html>
