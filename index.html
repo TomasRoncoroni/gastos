@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Gastos Personales</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
 
@@ -699,6 +698,65 @@ canvas { display: block; max-width: 100%; }
   border: 1px solid var(--border);
 }
 
+/* ─── Fondo mudanza ──────────────────────────────────────── */
+.mudanza-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.mudanza-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.mudanza-title { font-size: 14px; font-weight: 700; }
+.mudanza-meta { font-size: 11px; color: var(--fg3); }
+.mudanza-progress-wrap {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.mudanza-bar-track {
+  flex: 1; height: 10px; background: var(--surface2);
+  border-radius: 5px; overflow: hidden;
+}
+.mudanza-bar-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), #4DB896);
+  transition: width .4s ease;
+}
+.mudanza-pct { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 36px; text-align: right; }
+.mudanza-amounts {
+  font-size: 12px; color: var(--fg2);
+  margin-bottom: 12px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.mudanza-amounts strong { color: var(--fg); }
+.mudanza-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.mudanza-input {
+  flex: 1; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--fg); font-size: 14px; outline: none;
+}
+.mudanza-input:focus { border-color: var(--accent); }
+.mudanza-add-btn {
+  padding: 9px 14px;
+  background: var(--accent); color: #fff;
+  border-radius: 8px; font-size: 13px; font-weight: 700;
+  white-space: nowrap;
+}
+.mudanza-history { margin-top: 4px; }
+.mudanza-hist-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--fg2);
+}
+.mudanza-hist-row .mh-amount { font-weight: 600; color: var(--ok); }
+.mudanza-hist-row .mh-del {
+  background: none; color: var(--fg3); font-size: 11px;
+  padding: 2px 6px; border-radius: 4px;
+}
+.mudanza-hist-row .mh-del:hover { color: var(--danger); background: var(--danger-lt); }
+
 /* ─── Sueldo edit button ─────────────────────────────────── */
 .sueldo-edit-btn {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1028,6 +1086,26 @@ canvas { display: block; max-width: 100%; }
       </div>
     </div>
 
+    <!-- Fondo mudanza -->
+    <div class="mudanza-card" id="mudanza-card">
+      <div class="mudanza-header">
+        <span class="mudanza-title">🏠 Fondo mudanza</span>
+        <span class="mudanza-meta" id="mudanza-meta"></span>
+      </div>
+      <div class="mudanza-progress-wrap">
+        <div class="mudanza-bar-track">
+          <div class="mudanza-bar-fill" id="mudanza-bar-fill"></div>
+        </div>
+        <div class="mudanza-pct" id="mudanza-pct">0%</div>
+      </div>
+      <div class="mudanza-amounts" id="mudanza-amounts"></div>
+      <div class="mudanza-input-row">
+        <input type="number" id="mudanza-input" class="mudanza-input" placeholder="Agregar aporte ($)" inputmode="decimal">
+        <button class="mudanza-add-btn" id="mudanza-add-btn">+ Agregar</button>
+      </div>
+      <div class="mudanza-history" id="mudanza-history"></div>
+    </div>
+
     <!-- Exportar resumen -->
     <button class="export-btn" id="export-btn">📤 Exportar resumen para analizar con Claude</button>
 
@@ -1138,7 +1216,7 @@ function getFixedCosts(monthKey) {
 
 // ─── State ─────────────────────────────────────────────────────
 // sueldos: { "2026-10": 1283023, ... }  — per month override
-let state = { currentMonth: getCurrentMonthKey(), expenses: {}, sueldos: {}, cierreDismissed: {}, saldos: {}, notas: {} };
+let state = { currentMonth: getCurrentMonthKey(), expenses: {}, sueldos: {}, cierreDismissed: {}, saldos: {}, notas: {}, mudanza: [] };
 // saldos: { "2026-10": [{ts: timestamp_ms, amount: 150000, calc: 200000}, ...] }
 // notas: { "2026-10": "texto de la nota del mes" }
 
@@ -1158,6 +1236,7 @@ function load() {
       state.cierreDismissed = parsed.cierreDismissed || {};
       state.saldos          = parsed.saldos          || {};
       state.notas           = parsed.notas           || {};
+      state.mudanza         = parsed.mudanza         || [];
     }
     // migrate v1
     const v1 = localStorage.getItem('gastos_tr_v1');
@@ -1176,7 +1255,8 @@ function save() {
       sueldos: state.sueldos,
       cierreDismissed: state.cierreDismissed,
       saldos: state.saldos,
-      notas: state.notas
+      notas: state.notas,
+      mudanza: state.mudanza
     }));
   } catch(e) {}
 }
@@ -2186,6 +2266,63 @@ function getCalcDisponible(mk) {
   return sueldo - RESERVA - totalFixed - totalVars;
 }
 
+// ─── Fondo mudanza ─────────────────────────────────────────────
+const MUDANZA_OBJETIVO = 900000;
+const MUDANZA_FECHA    = '2026-12-31'; // objetivo: tenerlo para fin de año
+
+function renderMudanza() {
+  const aportes = state.mudanza || [];
+  const total   = aportes.reduce((s, a) => s + a.amount, 0);
+  const pct     = Math.min(100, Math.round((total / MUDANZA_OBJETIVO) * 100));
+  const falta   = Math.max(0, MUDANZA_OBJETIVO - total);
+
+  // Meses restantes hasta dic 2026
+  const now  = new Date();
+  const end  = new Date(2026, 11, 31);
+  const diffMs = end - now;
+  const mesesRest = Math.max(1, Math.ceil(diffMs / (1000*60*60*24*30)));
+  const porMes  = falta > 0 ? Math.ceil(falta / mesesRest) : 0;
+
+  document.getElementById('mudanza-bar-fill').style.width = pct + '%';
+  document.getElementById('mudanza-pct').textContent = pct + '%';
+  document.getElementById('mudanza-meta').textContent = `Objetivo: dic 2026`;
+  document.getElementById('mudanza-amounts').innerHTML =
+    `<span>Juntado: <strong>${fmt(total)}</strong></span>` +
+    `<span>Falta: <strong>${fmt(falta)}</strong></span>` +
+    (falta > 0 ? `<span>Guardá ~<strong>${fmt(porMes)}/mes</strong> para llegar</span>` : `<span style="color:var(--ok)">🎉 ¡Objetivo cumplido!</span>`);
+
+  const hist = document.getElementById('mudanza-history');
+  if (!aportes.length) { hist.innerHTML = ''; return; }
+  hist.innerHTML = [...aportes].reverse().map(a => {
+    const d = new Date(a.ts).toLocaleDateString('es-AR', { day:'numeric', month:'short', year:'numeric' });
+    return `<div class="mudanza-hist-row">
+      <span>${d}${a.label ? ' · ' + escHtml(a.label) : ''}</span>
+      <span class="mh-amount">+${fmt(a.amount)}</span>
+      <button class="mh-del" data-ts="${a.ts}">✕</button>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('mudanza-add-btn').addEventListener('click', () => {
+  const input  = document.getElementById('mudanza-input');
+  const amount = parseFloat(input.value);
+  if (!amount || amount <= 0) { input.focus(); return; }
+  if (!state.mudanza) state.mudanza = [];
+  state.mudanza.push({ ts: Date.now(), amount });
+  save();
+  input.value = '';
+  renderMudanza();
+});
+
+document.getElementById('mudanza-history').addEventListener('click', e => {
+  const btn = e.target.closest('.mh-del');
+  if (!btn) return;
+  const ts = parseFloat(btn.dataset.ts);
+  state.mudanza = (state.mudanza || []).filter(a => a.ts !== ts);
+  save();
+  renderMudanza();
+});
+
 function renderSaldo() {
   const mk = state.currentMonth;
   const snapshots = state.saldos[mk] || [];
@@ -2321,6 +2458,5 @@ load();
 render();
 renderAlertas();
 renderSaldo();
+renderMudanza();
 </script>
-
-</body></html>
