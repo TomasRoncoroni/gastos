@@ -582,6 +582,32 @@ canvas { display: block; max-width: 100%; }
 }
 .export-close-btn:hover { background: var(--border); }
 
+/* ─── Duplicado warning ──────────────────────────────────── */
+.dup-warning {
+  background: var(--warn-lt);
+  border: 1.5px solid var(--warn);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--fg);
+  display: none;
+}
+.dup-warning strong { color: var(--warn); display: block; margin-bottom: 4px; font-size: 13px; }
+.dup-warning .dup-item { color: var(--fg2); margin-top: 2px; }
+.dup-actions { display: flex; gap: 8px; margin-top: 10px; }
+.dup-btn-igual {
+  flex: 1; padding: 8px;
+  background: var(--warn); color: #fff;
+  border-radius: 7px; font-size: 12px; font-weight: 700;
+}
+.dup-btn-nuevo {
+  flex: 1; padding: 8px;
+  background: var(--surface2); color: var(--fg);
+  border-radius: 7px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border);
+}
+
 /* ─── Sueldo edit button ─────────────────────────────────── */
 .sueldo-edit-btn {
   display: inline-flex; align-items: center; gap: 4px;
@@ -951,7 +977,8 @@ canvas { display: block; max-width: 100%; }
         <label>Notas (opcional)</label>
         <input id="f-notes" type="text" placeholder="Detalle adicional…">
       </div>
-      <button type="submit" class="btn-submit">Guardar gasto</button>
+      <div class="dup-warning" id="dup-warning"></div>
+      <button type="submit" class="btn-submit" id="btn-submit">Guardar gasto</button>
     </form>
   </div>
 </div>
@@ -1396,6 +1423,8 @@ function closeForm() {
   document.getElementById('expense-form').reset();
   document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('sel'));
   document.getElementById('f-cat').value = '';
+  document.getElementById('dup-warning').style.display = 'none';
+  _pendingExpense = null;
 }
 
 document.getElementById('open-form').addEventListener('click', openForm);
@@ -1421,6 +1450,20 @@ CATEGORIES.forEach(c => {
 });
 
 // Submit
+let _pendingExpense = null; // holds data when waiting for dup confirmation
+
+function saveExpense(desc, amount, date, cat, notes) {
+  const [y,m] = date.split('-');
+  const mk = `${y}-${m}`;
+  if (!state.expenses[mk]) state.expenses[mk] = [];
+  state.expenses[mk].push({ id: Date.now() + Math.random(), desc, amount, date, cat, notes });
+  save();
+  state.currentMonth = mk;
+  render(); renderAlertas();
+  closeForm();
+  _pendingExpense = null;
+}
+
 document.getElementById('expense-form').addEventListener('submit', e => {
   e.preventDefault();
   const desc   = document.getElementById('f-desc').value.trim();
@@ -1431,20 +1474,54 @@ document.getElementById('expense-form').addEventListener('submit', e => {
 
   if (!desc || !amount || !date || !cat) return;
 
-  // Figure out which month bucket this date belongs to
-  const [y,m] = date.split('-');
-  const mk = `${y}-${m}`;
-
-  if (!state.expenses[mk]) state.expenses[mk] = [];
-  state.expenses[mk].push({
-    id: Date.now() + Math.random(),
-    desc, amount, date, cat, notes
+  // Check for duplicates: same amount in last 3 days across all months
+  const dateObj = new Date(date + 'T12:00:00');
+  const desde   = new Date(dateObj); desde.setDate(desde.getDate() - 3);
+  const duplicados = [];
+  Object.values(state.expenses).forEach(arr => {
+    arr.forEach(ex => {
+      if (Math.abs(ex.amount - amount) < 1) {
+        const exDate = new Date(ex.date + 'T12:00:00');
+        if (exDate >= desde && exDate <= dateObj) {
+          duplicados.push(ex);
+        }
+      }
+    });
   });
 
-  save();
-  state.currentMonth = mk;
-  render(); renderAlertas();
-  closeForm();
+  const dupWarn = document.getElementById('dup-warning');
+
+  if (duplicados.length > 0) {
+    // Show warning and wait for user decision
+    _pendingExpense = { desc, amount, date, cat, notes };
+    const items = duplicados.slice(0,3).map(ex =>
+      `<div class="dup-item">· ${ex.date} — ${ex.desc} (${fmt(ex.amount)})</div>`
+    ).join('');
+    dupWarn.style.display = 'block';
+    dupWarn.innerHTML = `
+      <strong>⚠️ Ya existe un gasto con el mismo importe</strong>
+      ${items}
+      <div style="margin-top:6px;font-size:12px;">¿Es un gasto diferente o el mismo?</div>
+      <div class="dup-actions">
+        <button type="button" class="dup-btn-nuevo" id="dup-btn-nuevo">Es diferente, guardar igual</button>
+        <button type="button" class="dup-btn-igual" id="dup-btn-igual">Es el mismo, cancelar</button>
+      </div>
+    `;
+    document.getElementById('dup-btn-nuevo').addEventListener('click', () => {
+      const p = _pendingExpense;
+      dupWarn.style.display = 'none';
+      saveExpense(p.desc, p.amount, p.date, p.cat, p.notes);
+    });
+    document.getElementById('dup-btn-igual').addEventListener('click', () => {
+      dupWarn.style.display = 'none';
+      _pendingExpense = null;
+      closeForm();
+    });
+    return; // don't save yet
+  }
+
+  dupWarn.style.display = 'none';
+  saveExpense(desc, amount, date, cat, notes);
 });
 
 // Delete expense
